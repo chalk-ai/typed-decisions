@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Typed Decisions</title>
+<style>
+  :root { --bg:#224A41; --panel:#1C3B34; --line:#32645B; --ink:#EFF5F3; --muted:#B9CFC7;
+          --accent:#BBD96D; --mint:#70CD96; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink);
+         font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif; padding:32px 16px; }
+  main { max-width:960px; margin:0 auto; display:flex; flex-direction:column; gap:16px; }
+  h1 { font-size:22px; font-weight:500; margin:0; }
+  .sub { color:var(--muted); margin:-8px 0 0; font-size:14px; }
+  label { font:12px ui-monospace,Menlo,monospace; text-transform:uppercase; letter-spacing:.06em;
+          color:var(--muted); display:block; margin-bottom:6px; }
+  textarea { width:100%; background:var(--panel); color:var(--ink); border:1px solid var(--line);
+             border-radius:4px; padding:12px; font:13px/1.5 ui-monospace,Menlo,monospace; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:720px) { .grid { grid-template-columns:1fr; } }
+  button { font:13px ui-monospace,Menlo,monospace; text-transform:uppercase; letter-spacing:.06em;
+           border:1px solid var(--accent); border-radius:20px; padding:10px 22px; cursor:pointer;
+           background:var(--accent); color:var(--bg); width:fit-content; }
+  button:disabled { opacity:.5; cursor:default; }
+  pre { background:var(--panel); border:1px solid var(--line); border-radius:4px; padding:12px;
+        margin:0; overflow:auto; font:13px/1.5 ui-monospace,Menlo,monospace; min-height:120px; }
+  #err { color:#F8947F; min-height:20px; font-size:14px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Typed decisions</h1>
+  <p class="sub">Ask several typed questions about a situation and get calibrated answers in one forward pass.</p>
+  <div class="grid">
+    <div><label for="state">State</label><textarea id="state" rows="10"></textarea></div>
+    <div><label for="questions">Questions (JSON)</label><textarea id="questions" rows="10"></textarea></div>
+  </div>
+  <button id="go">Decide</button>
+  <div id="err"></div>
+  <div><label>Answers</label><pre id="out"></pre></div>
+</main>
+<script>
+document.getElementById("state").value =
+  "Customer (Gold tier) writes: My order arrived with a cracked screen and I need a working laptop " +
+  "for a client demo on Friday. I want my money back or a replacement shipped overnight. " +
+  "This is the second damaged delivery this month.";
+document.getElementById("questions").value = JSON.stringify({
+  route: { type: "choice", instructions: "Which team should handle this request?",
+           criteria: { billing: "Payments, refunds and invoices",
+                       shipping: "Delivery, damage in transit, replacements",
+                       technical: "Product setup and troubleshooting",
+                       account: "Login, profile and membership" } },
+  refund: { type: "noul", instructions: "Does the customer ask for a refund?" },
+  urgency: { type: "score", instructions: "How urgent is this request?", criteria: ["low", "medium", "high"] },
+}, null, 2);
+
+document.getElementById("go").onclick = async () => {
+  const btn = document.getElementById("go"), err = document.getElementById("err"), out = document.getElementById("out");
+  err.textContent = "";
+  let questions;
+  try { questions = JSON.parse(document.getElementById("questions").value); }
+  catch (e) { err.textContent = "Questions are not valid JSON: " + e.message; return; }
+  btn.disabled = true;
+  try {
+    const t0 = performance.now();
+    const res = await fetch("decide", { method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ state: document.getElementById("state").value, questions }) });
+    const body = await res.json();
+    if (!res.ok) throw new Error(typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail));
+    out.textContent = JSON.stringify(body, null, 2) +
+      `\n\n// round trip ${Math.round(performance.now() - t0)} ms, model ${body.infer_ms} ms`;
+  } catch (e) { err.textContent = e.message; }
+  finally { btn.disabled = false; }
+};
+</script>
+</body>
+</html>
