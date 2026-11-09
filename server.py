@@ -160,6 +160,16 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(lifespan=lifespan)
+
+
+# This host exists only to back a chalk.ai/demos page; keep it out of search results.
+@app.middleware("http")
+async def add_noindex_header(request, call_next):
+    response = await call_next(request)
+    response.headers["X-Robots-Tag"] = "noindex, nofollow"
+    return response
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origin_regex=ALLOWED_ORIGIN_REGEX,
