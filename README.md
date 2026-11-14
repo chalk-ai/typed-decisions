@@ -27,8 +27,7 @@ invoice processing, security alerts and agent-trace observability.
 ## Run it
 
 You need [`uv`](https://docs.astral.sh/uv/) and a Chalk environment that can schedule GPU workloads.
-Credentials come from the SDK’s ambient credentials from `chalk login`. You can also set `CHALK_API_SERVER`,
-`CHALK_CLIENT_ID`, `CHALK_CLIENT_SECRET` and `CHALK_ENVIRONMENT_ID` yourself.
+Credentials come from your existing `chalk login`.
 
 ```bash
 ./deploy.py
